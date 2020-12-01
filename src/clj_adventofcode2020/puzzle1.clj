@@ -1,38 +1,31 @@
 (ns clj-adventofcode2020.puzzle1
-  (:gen-class))
+  (:gen-class)
+  (:require [clojure.math.combinatorics :as combo]))
 
 ;; Consciously eagerly loading file into memory.
 ;; Lazy sequence from a file makes the code slightly more ugly.
-(def puzzle-input
+(def puzzle1-example
+  (->> (slurp "resources/puzzle1.txt")
+       (clojure.string/split-lines)
+       (map #(Integer/parseInt %))))
+
+(def puzzle1-real
   (->> (slurp "resources/puzzle1-real.txt")
        (clojure.string/split-lines)
        (map #(Integer/parseInt %))))
 
-(defn first-plus-every-other
-  [first-int ints]
-  (if (empty? ints) nil
-      (lazy-seq
-       (cons (+ first-int (first ints))
-             (first-plus-every-other first-int (rest ints))))))
-
-(defn combinations-of-first-plus-every-other
-  [ints start-pos]
-  (if (empty? ints) nil
-      (lazy-seq
-       (concat (map-indexed #(list [start-pos (+ start-pos (inc %1))] %2) (first-plus-every-other (first ints) (rest ints)))
-               (combinations-of-first-plus-every-other (rest ints) (inc start-pos))))))
-
-(defn take-until-sum-is-2020
-  [ints]
-  (first (take 1 (drop-while #(not= 2020 (second %)) (combinations-of-first-plus-every-other ints 0)))))
-
-
 (defn run-pt1
   []
   (println "Ran part one")
-  (let [positions (first (take-until-sum-is-2020 puzzle-input))]
-    (println (* (nth puzzle-input (first positions)) (nth puzzle-input (second positions))))))
+  (let [possible-combinations (combo/combinations puzzle1-real 2)
+        sum-is-2020 (first
+                     (take 1 (drop-while #(not= 2020 (+ (first %) (second %))) possible-combinations)))]
+    (println (* (first sum-is-2020) (second sum-is-2020)))))
 
 (defn run-pt2
   []
-  (println "Ran part two"))
+  (println "Ran part two")
+  (let [possible-combinations (combo/combinations puzzle1-real 3)
+        sum-is-2020 (first
+                     (take 1 (drop-while #(not= 2020 (+ (first %) (second %) (nth % 2))) possible-combinations)))]
+    (println (* (first sum-is-2020) (second sum-is-2020) (nth sum-is-2020 2)))))
