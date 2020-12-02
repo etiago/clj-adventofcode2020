@@ -2,11 +2,9 @@
   (:gen-class)
   (:require [clojure.string :as str]))
 
-(def puzzle2-example
-  (->> (slurp "resources/puzzle2.txt")
-       (clojure.string/split-lines)
-       (map (fn [line]
-              (let [line-parts (str/split line #": ")
+(defn puzzle-line-to-policy-and-password
+  [line]
+  (let [line-parts (str/split line #": ")
                     policy-part (first line-parts)
                     password (second line-parts)
                     policy-split-parts (str/split policy-part #" ")
@@ -15,22 +13,17 @@
                     policy-min (Integer/parseInt (first policy-min-max-parts))
                     policy-max (Integer/parseInt (second policy-min-max-parts))]
                 {:policy { :min policy-min :max policy-max :letter policy-letter }
-                 :password password})))))
+                 :password password}))
+
+(def puzzle2-example
+  (->> (slurp "resources/puzzle2.txt")
+       (clojure.string/split-lines)
+       (map puzzle-line-to-policy-and-password)))
 
 (def puzzle2-real
   (->> (slurp "resources/puzzle2-real.txt")
        (clojure.string/split-lines)
-       (map (fn [line]
-              (let [line-parts (str/split line #": ")
-                    policy-part (first line-parts)
-                    password (second line-parts)
-                    policy-split-parts (str/split policy-part #" ")
-                    policy-letter (first (char-array (second policy-split-parts)))
-                    policy-min-max-parts (str/split (first policy-split-parts) #"-")
-                    policy-min (Integer/parseInt (first policy-min-max-parts))
-                    policy-max (Integer/parseInt (second policy-min-max-parts))]
-                {:policy { :min policy-min :max policy-max :letter policy-letter }
-                 :password password})))))
+       (map puzzle-line-to-policy-and-password)))
 
 (defn password-is-valid?
   [policy-and-password]
@@ -52,7 +45,6 @@
         policy-min (get-in policy-and-password [:policy :min])
         policy-max (get-in policy-and-password [:policy :max])
         password (get-in policy-and-password [:password])
-        policy-letter-occurrences-in-password (count (filter #(= policy-letter %) password))
         min-matches (= policy-letter (nth password (dec policy-min)))
         max-matches (= policy-letter (nth password (dec policy-max)))]
     (if (and min-matches max-matches)
