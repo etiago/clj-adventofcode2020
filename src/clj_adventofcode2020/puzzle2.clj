@@ -51,12 +51,10 @@
   []
   (->> (map password-is-valid? puzzle2-real)
        (filter true?)
-       (count)
-       (println)))
+       (count)))
 
 (defn run-pt2
   []
   (->> (map password-is-valid-positionally? puzzle2-real)
        (filter true?)
-       (count)
-       (println)))
+       (count)))
