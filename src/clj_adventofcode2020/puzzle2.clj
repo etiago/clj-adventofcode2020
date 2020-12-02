@@ -5,15 +5,15 @@
 (defn puzzle-line-to-policy-and-password
   [line]
   (let [line-parts (str/split line #": ")
-                    policy-part (first line-parts)
-                    password (second line-parts)
-                    policy-split-parts (str/split policy-part #" ")
-                    policy-letter (first (char-array (second policy-split-parts)))
-                    policy-min-max-parts (str/split (first policy-split-parts) #"-")
-                    policy-min (Integer/parseInt (first policy-min-max-parts))
-                    policy-max (Integer/parseInt (second policy-min-max-parts))]
-                {:policy { :min policy-min :max policy-max :letter policy-letter }
-                 :password password}))
+        policy-part (first line-parts)
+        password (second line-parts)
+        policy-split-parts (str/split policy-part #" ")
+        policy-letter (first (char-array (second policy-split-parts)))
+        policy-min-max-parts (str/split (first policy-split-parts) #"-")
+        policy-min (Integer/parseInt (first policy-min-max-parts))
+        policy-max (Integer/parseInt (second policy-min-max-parts))]
+    {:policy { :min policy-min :max policy-max :letter policy-letter }
+     :password password}))
 
 (def puzzle2-example
   (->> (slurp "resources/puzzle2.txt")
