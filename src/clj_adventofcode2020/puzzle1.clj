@@ -16,7 +16,6 @@
 
 (defn run-pt1
   []
-  (println "Ran part one")
   (let [possible-combinations (combo/combinations puzzle1-real 2)
         sum-is-2020 (first
                      (take 1 (drop-while #(not= 2020 (+ (first %) (second %))) possible-combinations)))]
@@ -24,7 +23,6 @@
 
 (defn run-pt2
   []
-  (println "Ran part two")
   (let [possible-combinations (combo/combinations puzzle1-real 3)
         sum-is-2020 (first
                      (take 1 (drop-while #(not= 2020 (+ (first %) (second %) (nth % 2))) possible-combinations)))]
