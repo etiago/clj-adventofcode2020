@@ -34,10 +34,6 @@
         policy-letter-occurrences-in-password (count (filter #(= policy-letter %) password))]
     (and (>= policy-letter-occurrences-in-password policy-min)
          (<= policy-letter-occurrences-in-password policy-max))))
-    
-(defn run-pt1
-  []
-  (println (count (filter true? (map password-is-valid? puzzle2-real)))))
 
 (defn password-is-valid-positionally?
   [policy-and-password]
@@ -50,8 +46,17 @@
     (if (and min-matches max-matches)
       false
       (or min-matches max-matches))))
-         
+
+(defn run-pt1
+  []
+  (->> (map password-is-valid? puzzle2-real)
+       (filter true?)
+       (count)
+       (println)))
 
 (defn run-pt2
   []
-    (println (count (filter true? (map password-is-valid-positionally? puzzle2-real)))))
+  (->> (map password-is-valid-positionally? puzzle2-real)
+       (filter true?)
+       (count)
+       (println)))
