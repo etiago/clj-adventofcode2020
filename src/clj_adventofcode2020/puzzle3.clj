@@ -2,51 +2,72 @@
   (:gen-class)
   (:require [clojure.string :as str]))
 
-(def puzzle3-example
-  (->> (slurp "resources/puzzle3-example.txt")
+(defn puzzle-lines-to-list-of-lists-with-trees-true
+  [puzzle-lines]
+  (map
+   (fn [line]
+     (map #(= "#" %) (clojure.string/split line #"")))
+   puzzle-lines))
+
+(defn load-puzzle-file-to-list-of-lists-with-trees-true
+  [filename]
+  (->> (slurp filename)
        (clojure.string/split-lines)
-       (map (fn [line]
-              (map #(= "#" %) (clojure.string/split line #""))))))
+       puzzle-lines-to-list-of-lists-with-trees-true))
+
+(def puzzle3-example
+  (load-puzzle-file-to-list-of-lists-with-trees-true "resources/puzzle3-example.txt"))
 
 (def puzzle3-real
-  (->> (slurp "resources/puzzle3-real.txt")
-       (clojure.string/split-lines)
-       (map (fn [line]
-              (map #(= "#" %) (clojure.string/split line #""))))))
+  (load-puzzle-file-to-list-of-lists-with-trees-true "resources/puzzle3-real.txt"))
 
 (defn is-tree?
   [puzzle x y]
   (nth (nth puzzle y) x))
 
 (defn is-outside-to-the-right?
-  [puzzle x y]
-  (>= x (count (nth puzzle y))))
+  [puzzle x]
+  (>= x (count (first puzzle))))
 
-(defn apply-slope-slide
-  [puzzle old-x old-y slope-x slope-y]
-  [(+ slope-x old-x) (+ slope-y old-y)])
+(defn crossed-bottom?
+  [puzzle y]
+  (>= y (count puzzle)))
 
-(defn is-at-bottom?
-  [puzzle x y]
-  (= (inc y) (count puzzle)))
+(defn x-or-scaled-back-x-to-fit
+  [puzzle x]
+  (if (is-outside-to-the-right? puzzle x)
+    (recur puzzle (mod x (count (first puzzle))))
+    x))
 
-(defn count-trees-to-bottom
-  [puzzle x y tree-count slopes]
-  (if (is-outside-to-the-right? puzzle x y)
-    (count-trees-to-bottom puzzle (mod x (count (first puzzle))) y tree-count slopes)
-    (let [new-tree-count (if (is-tree? puzzle x y)
-                           (inc tree-count)
-                           tree-count)]
-      (if (is-at-bottom? puzzle x y)
-        new-tree-count
-        (let [new-x-y (apply-slope-slide puzzle x y (first slopes) (second slopes))]
-          (count-trees-to-bottom puzzle (first new-x-y) (second new-x-y) new-tree-count slopes) )))))
-    
+(defn sliding-coordinates
+  [puzzle start-x-y sliding-delta-x-y]
+  (let [new-x (+ (first start-x-y) (first sliding-delta-x-y))
+        scaled-new-x (x-or-scaled-back-x-to-fit puzzle new-x)
+        new-y (+ (second start-x-y) (second sliding-delta-x-y))]
+    (cons start-x-y (lazy-seq (sliding-coordinates puzzle [scaled-new-x new-y] sliding-delta-x-y)))))
+
+(defn sliding-coordinates-repeating-right-until-bottom
+  [puzzle start-x-y sliding-delta-x-y]
+  (take-while #(not (crossed-bottom? puzzle (second %))) (sliding-coordinates puzzle start-x-y sliding-delta-x-y)))
+
+(defn count-trees-for-puzzle-and-slope
+  [puzzle slope]
+  (->> (sliding-coordinates-repeating-right-until-bottom puzzle [0 0] slope)
+         (map #(is-tree? puzzle (first %) (second %)))
+         (filter true?)
+         (count)))
+
 (defn run-pt1
   []
-  (count-trees-to-bottom puzzle3-real 0 0 0 [3 1]))
+  (let [current-puzzle puzzle3-real]
+    (count-trees-for-puzzle-and-slope current-puzzle [3 1])))
 
 (defn run-pt2
   []
-  (let [slopes [[1 1] [3 1] [5 1] [7 1] [1 2]]]
-       (reduce * (map #(count-trees-to-bottom puzzle3-real 0 0 0 %) slopes))))
+  (let [current-puzzle puzzle3-real
+        slopes [[1 1] [3 1] [5 1] [7 1] [1 2]]]
+    (->> slopes
+         (map #(count-trees-for-puzzle-and-slope current-puzzle %))
+         (reduce *))))
+
+
