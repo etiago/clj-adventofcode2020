@@ -19,6 +19,6 @@
          (and (= puzzle "1") (= part "2")) (println (puzzle1/run-pt2))
          (and (= puzzle "2") (= part "1")) (println (puzzle2/run-pt1))
          (and (= puzzle "2") (= part "2")) (println (puzzle2/run-pt2))
-         (and (= puzzle "3") (= part "2")) (println (puzzle3/run-pt1))
+         (and (= puzzle "3") (= part "1")) (println (puzzle3/run-pt1))
          (and (= puzzle "3") (= part "2")) (println (puzzle3/run-pt2))
          :else "Puzzle not found")))))

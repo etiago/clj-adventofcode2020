@@ -31,22 +31,22 @@
   (= (inc y) (count puzzle)))
 
 (defn count-trees-to-bottom
-  [puzzle x y tree-count slope-x slope-y]
+  [puzzle x y tree-count slopes]
   (if (is-outside-to-the-right? puzzle x y)
-    (count-trees-to-bottom puzzle (mod x (count (first puzzle))) y tree-count slope-x slope-y)
+    (count-trees-to-bottom puzzle (mod x (count (first puzzle))) y tree-count slopes)
     (let [new-tree-count (if (is-tree? puzzle x y)
                            (inc tree-count)
                            tree-count)]
       (if (is-at-bottom? puzzle x y)
         new-tree-count
-        (let [new-x-y (apply-slope-slide puzzle x y slope-x slope-y)]
-          (count-trees-to-bottom puzzle (first new-x-y) (second new-x-y) new-tree-count slope-x slope-y) )))))
+        (let [new-x-y (apply-slope-slide puzzle x y (first slopes) (second slopes))]
+          (count-trees-to-bottom puzzle (first new-x-y) (second new-x-y) new-tree-count slopes) )))))
     
 (defn run-pt1
   []
-  
-  )
+  (count-trees-to-bottom puzzle3-real 0 0 0 [3 1]))
 
 (defn run-pt2
   []
-  )
+  (let [slopes [[1 1] [3 1] [5 1] [7 1] [1 2]]]
+       (reduce * (map #(count-trees-to-bottom puzzle3-real 0 0 0 %) slopes))))
