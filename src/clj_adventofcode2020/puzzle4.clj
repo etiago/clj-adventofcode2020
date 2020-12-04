@@ -45,50 +45,42 @@
 
 (defn validate-byr
   [passport]
-  (if (nil? passport)
-    nil
+  (when (some? passport)
     (try
       (let [byr-parsed (Integer/valueOf (get passport :byr))]
-        (if (and (>= byr-parsed 1920)
-                 (<= byr-parsed 2002))
-          passport
-          nil))
+        (when (and (>= byr-parsed 1920)
+                   (<= byr-parsed 2002))
+          passport))
       (catch Exception e nil))))
 
 (defn validate-iyr
   [passport]
-  (if (nil? passport)
-    nil
+  (when (some? passport)
     (try
       (let [iyr-parsed (Integer/valueOf (get passport :iyr))]
-        (if (and (>= iyr-parsed 2010)
-                 (<= iyr-parsed 2020))
-          passport
-          nil))
+        (when (and (>= iyr-parsed 2010)
+                   (<= iyr-parsed 2020))
+          passport))
       (catch Exception e nil))))
 
 (defn validate-eyr
   [passport]
-  (if (nil? passport)
-    nil
+  (when (some? passport)
     (try
       (let [eyr-parsed (Integer/valueOf (get passport :eyr))]
-        (if (and (>= eyr-parsed 2020)
-                 (<= eyr-parsed 2030))
-          passport
-          nil))
+        (when (and (>= eyr-parsed 2020)
+                   (<= eyr-parsed 2030))
+          passport))
       (catch Exception e nil))))
 
 (defn validate-hgt-cm
   [passport]
   (try
-      (let [hgt-parsed (Integer/valueOf (re-find #"\d+" (get passport :hgt)))]
-        (if (and (>= hgt-parsed 150)
+    (let [hgt-parsed (Integer/valueOf (re-find #"\d+" (get passport :hgt)))]
+      (when (and (>= hgt-parsed 150)
                  (<= hgt-parsed 193))
-          passport
-          nil))
-      (catch Exception e nil))
-  )
+        passport))
+    (catch Exception e nil)))
 
 (defn validate-hgt-in
   [passport]
@@ -103,8 +95,7 @@
 
 (defn validate-hgt
   [passport]
-  (if (nil? passport)
-    nil
+  (when (some? passport)
     (let [hgt (get passport :hgt)]
       (cond
         (str/includes? hgt "in") (validate-hgt-in passport)
@@ -113,30 +104,30 @@
 
 (defn validate-hcl
   [passport]
-  (if (nil? passport)
-    nil
-    (if (not (nil? (re-matches #"#[a-f0-9]{6}" (get passport :hcl))))
-      passport
-      nil)))
+  (when
+      (and
+       (some? passport)
+       (some? (re-matches #"#[a-f0-9]{6}" (get passport :hcl))))
+    passport))
 
 (defn validate-ecl
   [passport]
-  (if (nil? passport)
-    nil
-    (if (contains? #{"amb" "blu" "brn" "gry" "grn" "hzl" "oth"} (get passport :ecl))
-      passport
-      nil)))
+  (when
+      (and
+       (some? passport)
+       (contains? #{"amb" "blu" "brn" "gry" "grn" "hzl" "oth"} (get passport :ecl)))
+    passport))
 
 (defn validate-pid
   [passport]
-  (if (nil? passport)
-    nil
-    (if (not (nil? (re-matches #"[0-9]{9}" (get passport :pid))))
-      passport
-      nil)))
+  (when
+      (and
+       (some? passport)
+       (some? (re-matches #"[0-9]{9}" (get passport :pid))))
+    passport))
 
 (defn validate-all-mandatory-fields
-  [passports-map]
+  [passports]
   (map #(->> %
              (validate-byr)
              (validate-iyr)
@@ -146,7 +137,7 @@
              (validate-hcl)
              (validate-ecl)
              (validate-pid))
-       passports-map))
+       passports))
 
 (defn run-pt1
   []
@@ -154,6 +145,6 @@
 
 (defn run-pt2
   []
-  (let [passports-with-mandatory-fields (filter passport-contains-all-mandatory-fields puzzle4-pt2-example)
+  (let [passports-with-mandatory-fields (filter passport-contains-all-mandatory-fields puzzle4-real)
         validated-passports (validate-all-mandatory-fields passports-with-mandatory-fields)]
       (count (filter identity validated-passports))))
