@@ -14,36 +14,48 @@
 (def puzzle5-real
   (load-puzzle-file "resources/puzzle5-real.txt"))
 
-;; BFFFBBFRRR
-;; FFFBBBFRRR
-;; BBFFBBFRLL
+(defn go-left?
+  [walk-directions upper-char]
+  (= upper-char (first walk-directions)))
 
+(defn calculate-step
+  [left-edge right-edge]
+  (int (/ (- right-edge left-edge) 2)))
+  
 (defn binary-search
   [left-edge right-edge walk-directions upper-char]
   (if (= 1 (count walk-directions))
-    (if (= upper-char (first walk-directions))
+    (if (go-left? walk-directions upper-char)
       left-edge
       right-edge)
-    (let [step (int (/ (- right-edge left-edge) 2))]
-      (if (= upper-char (first walk-directions))
+    (let [step (calculate-step left-edge right-edge)]
+      (if (go-left? walk-directions upper-char)
         (recur left-edge (dec (- right-edge step)) (rest walk-directions) upper-char)
         (recur (inc (+ left-edge step)) right-edge (rest walk-directions) upper-char)))))
-
-(defn calculate-seat-id
-  [directions]
-  (let [row-directions (subs directions 0 7)
-        col-directions (subs directions 7 (count directions))
-        row-number (binary-search 0 127 row-directions \F)
-        col-number (binary-search 0 7 col-directions \L)]
-    (+ col-number (* row-number 8))))
 
 (defn calculate-seat-row-col
   [directions]
   (let [row-directions (subs directions 0 7)
-        col-directions (subs directions 7 (count directions))
+        col-directions (subs directions 7)
         row-number (binary-search 0 127 row-directions \F)
         col-number (binary-search 0 7 col-directions \L)]
-    { :row row-number :col col-number}))
+    {:row row-number :col col-number}))
+
+(defn calculate-seat-id
+  [directions]
+  (let [row-col (calculate-seat-row-col directions)]
+    (+ (get row-col :col) (* (get row-col :row) 8))))
+
+(defn unpack-col-from-values
+  [kv]
+  [(first kv) (into #{} (map #(get % :col) (second kv)))])
+
+(defn missing-cols
+  [kv]
+  (println kv)
+  {(first kv)
+   (set/difference
+    #{ 0 1 2 3 4 5 6 7 } (second kv))})
 
 (defn run-pt1
   []
@@ -52,9 +64,10 @@
 
 (defn run-pt2
   []
-  (filter #(= 1 (count (second %)))
-          (apply merge
-                 (map (fn [kv]
-                        {(first kv)
-                         (set/difference #{ 0 1 2 3 4 5 6 7 } (into #{} (map #(get % :col) (second kv))))})
-                      (group-by #(get % :row) (map calculate-seat-row-col puzzle5-real))))))
+  (->> puzzle5-real
+       (map calculate-seat-row-col)
+       (group-by #(get % :row))
+       (map unpack-col-from-values)
+       (map missing-cols)
+       (apply merge)
+       (filter #(= 1 (count (second %))))))
