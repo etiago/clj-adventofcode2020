@@ -7,19 +7,21 @@
   [tuple]
   {(keyword (first tuple)) (second tuple)})
 
+(defn line-to-passport-map
+  [line]
+  (->> (clojure.string/split line #" ")
+       (map (fn
+              [segment]
+              (->> (clojure.string/split segment #":")
+                   (tuple-str-to-map))))
+       (into {})))
+
 (defn load-puzzle-file
   [filename]
-  (as-> (slurp filename) f
-    (clojure.string/split f #"\n\n")
-    (map #(clojure.string/replace % #"\n" " ") f)
-    (map (fn
-           [line]
-           (->> (clojure.string/split line #" ")
-                (map (fn
-                       [segment]
-                       (->> (clojure.string/split segment #":")
-                            (tuple-str-to-map)))))) f)
-    (map (fn [list-of-maps] (into {} list-of-maps)) f)))
+  (-> (slurp filename)
+      (clojure.string/split #"\n\n")
+      (as-> f (map #(clojure.string/replace % #"\n" " ") f))
+      (as-> f (map line-to-passport-map f))))
 
 (def puzzle4-example
   (load-puzzle-file "resources/puzzle4-example.txt"))
@@ -30,121 +32,83 @@
 (def puzzle4-real
   (load-puzzle-file "resources/puzzle4-real.txt"))
 
-(defn passport-contains-all-mandatory-fields
-  [passport]
-  (let [mandatory-fields #{:byr :iyr :eyr :hgt :hcl :ecl :pid}
-        mandatory-field-count (count mandatory-fields)]
-    (= mandatory-field-count
-       (count (set/intersection mandatory-fields (set (keys passport)))))))
+(defn passport-contains-all-fields
+  [passport fields]
+  (let [field-count (count fields)]
+    (= field-count
+       (count (set/intersection fields (set (keys passport)))))))
 
-(defn contains-all-mandatory-fields
-  [passports-map]
+(defn all-passports-contain-all-fields
+  [passports-map fields]
   (map
-   passport-contains-all-mandatory-fields
+   #(passport-contains-all-fields % fields)
    passports-map))
 
-(defn validate-byr
-  [passport]
+(defn validate-numeric-field
+  [passport field min-value-inclusive max-value-inclusive]
   (when (some? passport)
     (try
-      (let [byr-parsed (Integer/valueOf (get passport :byr))]
-        (when (and (>= byr-parsed 1920)
-                   (<= byr-parsed 2002))
+      (let [parsed (Integer/valueOf (get passport field))]
+        (when (and (>= parsed min-value-inclusive)
+                   (<= parsed max-value-inclusive))
           passport))
       (catch Exception e nil))))
 
-(defn validate-iyr
-  [passport]
-  (when (some? passport)
-    (try
-      (let [iyr-parsed (Integer/valueOf (get passport :iyr))]
-        (when (and (>= iyr-parsed 2010)
-                   (<= iyr-parsed 2020))
-          passport))
-      (catch Exception e nil))))
-
-(defn validate-eyr
-  [passport]
-  (when (some? passport)
-    (try
-      (let [eyr-parsed (Integer/valueOf (get passport :eyr))]
-        (when (and (>= eyr-parsed 2020)
-                   (<= eyr-parsed 2030))
-          passport))
-      (catch Exception e nil))))
-
-(defn validate-hgt-cm
-  [passport]
+(defn validate-hgt-min-max
+  [passport field min-max]
   (try
-    (let [hgt-parsed (Integer/valueOf (re-find #"\d+" (get passport :hgt)))]
-      (when (and (>= hgt-parsed 150)
-                 (<= hgt-parsed 193))
+    (let [hgt-parsed (Integer/valueOf (re-find #"\d+" (get passport field)))]
+      (when (and (>= hgt-parsed (get min-max :min))
+                 (<= hgt-parsed (get min-max :max)))
         passport))
     (catch Exception e nil)))
 
-(defn validate-hgt-in
-  [passport]
-(try
-      (let [hgt-parsed (Integer/valueOf (re-find #"\d+" (get passport :hgt)))]
-        (if (and (>= hgt-parsed 59)
-                 (<= hgt-parsed 76))
-          passport
-          nil))
-      (catch Exception e nil))
-  )
-
 (defn validate-hgt
-  [passport]
+  [passport field limits-map]
   (when (some? passport)
     (let [hgt (get passport :hgt)]
       (cond
-        (str/includes? hgt "in") (validate-hgt-in passport)
-        (str/includes? hgt "cm") (validate-hgt-cm passport)
+        (str/includes? hgt "in") (validate-hgt-min-max passport field (get limits-map "in"))
+        (str/includes? hgt "cm") (validate-hgt-min-max passport field (get limits-map "cm"))
         :else nil))))
 
-(defn validate-hcl
-  [passport]
+(defn validate-field-is-in-set
+  [passport field possible-set]
   (when
       (and
        (some? passport)
-       (some? (re-matches #"#[a-f0-9]{6}" (get passport :hcl))))
+       (contains? possible-set (get passport field)))
     passport))
 
-(defn validate-ecl
-  [passport]
+(defn validate-field-with-regex
+  [passport field pattern]
   (when
       (and
        (some? passport)
-       (contains? #{"amb" "blu" "brn" "gry" "grn" "hzl" "oth"} (get passport :ecl)))
-    passport))
-
-(defn validate-pid
-  [passport]
-  (when
-      (and
-       (some? passport)
-       (some? (re-matches #"[0-9]{9}" (get passport :pid))))
+       (some? (re-matches pattern (get passport field))))
     passport))
 
 (defn validate-all-mandatory-fields
   [passports]
-  (map #(->> %
-             (validate-byr)
-             (validate-iyr)
-             (validate-eyr)
-             (validate-hgt)
-             (validate-byr)
-             (validate-hcl)
-             (validate-ecl)
-             (validate-pid))
+  (map #(-> %
+            (validate-numeric-field :byr 1920 2002)
+            (validate-numeric-field :iyr 2010 2020)
+            (validate-numeric-field :eyr 2020 2030)
+            (validate-hgt :hgt {"in" { :min 59 :max 76 }
+                                "cm" { :min 150 :max 193 }})
+            (validate-field-with-regex :hcl #"#[a-f0-9]{6}")
+            (validate-field-is-in-set :ecl #{"amb" "blu" "brn" "gry" "grn" "hzl" "oth"})
+            (validate-field-with-regex :pid #"[0-9]{9}"))
        passports))
 
 (defn run-pt1
   []
-  (count (filter true? (contains-all-mandatory-fields puzzle4-real))))
+  (count (filter true? (all-passports-contain-all-fields puzzle4-real #{:byr :iyr :eyr :hgt :hcl :ecl :pid}))))
 
 (defn run-pt2
   []
-  (let [passports-with-mandatory-fields (filter passport-contains-all-mandatory-fields puzzle4-real)
-        validated-passports (validate-all-mandatory-fields passports-with-mandatory-fields)]
-      (count (filter identity validated-passports))))
+  (->> puzzle4-real
+       (filter #(passport-contains-all-fields % #{:byr :iyr :eyr :hgt :hcl :ecl :pid}))
+       (validate-all-mandatory-fields)
+       (filter some?)
+       (count)))
