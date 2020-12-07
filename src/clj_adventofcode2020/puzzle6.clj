@@ -20,18 +20,34 @@
   (->> (load-puzzle-file "resources/puzzle6-real.txt")
        (map parse-group)))
 
+(defn split-each-passenger-answers
+  [group]
+  (map (fn [passenger-answers]
+         (clojure.string/split passenger-answers #"")) group))
+
+(defn all-answers-to-set-by-group
+  [all-answers]
+  (map (fn [group-answers]
+         (into #{} (flatten (split-each-passenger-answers group-answers))))
+       all-answers))
+
 (defn run-pt1
   []
   (->> puzzle6-real
-       (map (fn [passengers]
-              (into #{} (flatten (map #(clojure.string/split % #"") passengers)))))
+       (all-answers-to-set-by-group)
        (map count)
        (reduce +)))
 
+(defn split-each-passenger-answers-into-sets
+  [group]
+  (map (fn [passenger-answers]
+         (into #{} (clojure.string/split passenger-answers #""))) group))
+  
 (defn run-pt2
   []
   (->> puzzle6-real
        (map (fn [passengers]
-              (apply clojure.set/intersection (map #(into #{} (clojure.string/split % #"")) passengers))))
+              (reduce clojure.set/intersection
+                     (split-each-passenger-answers-into-sets passengers))))
        (map count)
        (reduce +)))
