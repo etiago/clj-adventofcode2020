@@ -45,13 +45,10 @@
 (defn contains-color-starting-on-color?
   [color-map color-start color-find to-check]
   (let [children (get color-map color-start)]
-    (if (and (empty? to-check) (empty? children))
-      false
-      (do
-        ;;(println (str "checking children: " children ", to-chec: " to-check ", color" color-find))
-        (if (contains? children color-find)
-          true
-          (recur color-map (first to-check) color-find (concat (rest to-check) (keys children))))))))
+    (when (not (and (empty? to-check) (empty? children)))
+      (if (contains? children color-find)
+        true
+        (recur color-map (first to-check) color-find (concat (rest to-check) (keys children)))))))
 
 (defn children-to-repeated-list
   [children]
@@ -71,8 +68,6 @@
   (let [current-puzzle puzzle7-real
         all-colors (keys current-puzzle)]
     (count (filter true? (map #(contains-color-starting-on-color? current-puzzle % "shiny gold" []) all-colors)))))
-
-    ;(contains-color-starting-on-color? current-puzzle "dotted black" "shiny gold" [])))
 
 (defn run-pt2
   []
