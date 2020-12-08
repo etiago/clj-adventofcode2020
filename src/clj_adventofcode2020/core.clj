@@ -1,6 +1,7 @@
 (ns clj-adventofcode2020.core
   (:gen-class)
-  (:require [clj-adventofcode2020.puzzle1 :as puzzle1]
+  (:require [clj-adventofcode2020.puzzle0 :as puzzle0]
+            [clj-adventofcode2020.puzzle1 :as puzzle1]
             [clj-adventofcode2020.puzzle2 :as puzzle2]
             [clj-adventofcode2020.puzzle3 :as puzzle3]
             [clj-adventofcode2020.puzzle4 :as puzzle4]
@@ -16,7 +17,7 @@
     (let [puzzle (nth args 0)
           part (nth args 1)
           runs (Integer/valueOf (nth args 2))
-          available-puzzles [1 2 3 4 5 6 7 8]]
+          available-puzzles [0 1 2 3 4 5 6 7 8]]
       (println
        (if (some #(= % (Integer/valueOf puzzle)) available-puzzles)
          (let [f (resolve
