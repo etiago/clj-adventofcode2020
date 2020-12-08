@@ -31,44 +31,57 @@
       (as-> p (apply merge p))))
 
 (def puzzle7-example
-  (->> (load-puzzle-file "resources/puzzle7-example.txt")
-       ))
+  (->> (load-puzzle-file "resources/puzzle7-example.txt")))
 
 (def puzzle7-example2
-  (->> (load-puzzle-file "resources/puzzle7-example2.txt")
-       ))
+  (->> (load-puzzle-file "resources/puzzle7-example2.txt")))
+
+(def puzzle7-deepexample
+  (->> (load-puzzle-file "resources/puzzle7-deepexample.txt")))
 
 (def puzzle7-real
-  (->> (load-puzzle-file "resources/puzzle7-real.txt")
-       ))
+  (->> (load-puzzle-file "resources/puzzle7-real.txt")))
 
 (defn contains-color-starting-on-color?
   [color-map color-start color-find to-check]
   (let [children (get color-map color-start)]
-    (when (not (and (empty? to-check) (empty? children)))
+    (when (not (every? empty? [to-check children]))
       (if (contains? children color-find)
         true
-        (recur color-map (first to-check) color-find (concat (rest to-check) (keys children)))))))
+        (recur
+         color-map
+         (first to-check)
+         color-find
+         (concat (rest to-check) (keys children)))))))
 
 (defn children-to-repeated-list
   [children]
-  (into [] (reduce concat (map #(repeat (second %) (first %)) children))))
+  (flatten (map #(repeat (second %) (first %)) children)))
 
 (defn count-visited
   [puzzle to-visit visited-count]
   (if (empty? to-visit)
     visited-count
-    (let [first-el (first to-visit)
-          children (get puzzle first-el)]
-      (recur puzzle (into (rest to-visit) (children-to-repeated-list children)) (inc visited-count)))))
+    (let [children (get puzzle (first to-visit))]
+      (recur
+       puzzle
+       (into (rest to-visit) (children-to-repeated-list children))
+       (inc visited-count)))))
 
+(defn contains-color-starting-on-color-fn
+  [puzzle starting-color]
+  (fn [color]
+    (contains-color-starting-on-color? puzzle color starting-color [])))
 
 (defn run-pt1
   []
   (let [current-puzzle puzzle7-real
         all-colors (keys current-puzzle)]
-    (count (filter true? (map #(contains-color-starting-on-color? current-puzzle % "shiny gold" []) all-colors)))))
+    (->> (keys current-puzzle)
+         (map (contains-color-starting-on-color-fn current-puzzle "shiny gold"))
+         (filter true?)
+         (count))))
 
 (defn run-pt2
   []
-  (count-visited puzzle7-real ["shiny gold"] 0))
+  (count-visited puzzle7-deepexample ["shiny gold"] 0))
