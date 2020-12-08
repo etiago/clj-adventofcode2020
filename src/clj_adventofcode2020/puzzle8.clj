@@ -51,37 +51,33 @@
 (def puzzle8-real
   (->> (load-puzzle-file "resources/puzzle8-real.txt")))
 
+(defn puzzle-to-accumulator-at-stop
+  [current-puzzle]
+  (loop [next-operation-idx 0
+         visited-positions #{}
+         accumulator 0]
+      (if (< next-operation-idx (count current-puzzle))
+        (if (contains? visited-positions next-operation-idx)
+          {:stop false :accumulator accumulator}
+          (let [op (nth current-puzzle next-operation-idx)
+                op-str (get op :operation)
+                op-fn (get op :fn)]
+            (cond
+              (= "acc" op-str) (recur (inc next-operation-idx)
+                                      (set/union #{next-operation-idx} visited-positions)
+                                      (op-fn accumulator))
+              (= "jmp" op-str) (recur (op-fn next-operation-idx)
+                                      (set/union #{next-operation-idx} visited-positions)
+                                      accumulator)
+              (= "nop" op-str) (recur (inc next-operation-idx)
+                                      (set/union #{next-operation-idx} visited-positions)
+                                      accumulator))))
+        {:stop true :accumulator accumulator})))
+
 (defn run-pt1
   []
   (let [current-puzzle puzzle8-real]
-    (loop [next-operation-idx 0
-           visited-positions #{}
-           accumulator 0]
-      (if (contains? visited-positions next-operation-idx)
-        (println "would repeat, acc is " accumulator)
-        (let [op (nth current-puzzle next-operation-idx)]
-          ;(println (str "loop: " next-operation-idx ", acc: " ((get op :fn) accumulator) ", op: " op))
-          (cond
-            (= "acc" (get op :operation)) (recur (inc next-operation-idx) (set/union #{next-operation-idx} visited-positions) ((get op :fn) accumulator))
-            (= "jmp" (get op :operation)) (recur ((get op :fn) next-operation-idx) (set/union #{next-operation-idx} visited-positions) accumulator)
-            (= "nop" (get op :operation)) (recur (inc next-operation-idx) (set/union #{next-operation-idx} visited-positions) accumulator)))))))
-
-
-(defn accumulator-or-nil
-  [current-puzzle]
-  (loop [next-operation-idx 0
-           visited-positions #{}
-           accumulator 0]
-      (if (< next-operation-idx (count current-puzzle))
-        (if (contains? visited-positions next-operation-idx)
-          accumulator
-          (let [op (nth current-puzzle next-operation-idx)]
-          ;(println (str "loop: " next-operation-idx ", acc: " ((get op :fn) accumulator) ", op: " op))
-            (cond
-              (= "acc" (get op :operation)) (recur (inc next-operation-idx) (set/union #{next-operation-idx} visited-positions) ((get op :fn) accumulator))
-              (= "jmp" (get op :operation)) (recur ((get op :fn) next-operation-idx) (set/union #{next-operation-idx} visited-positions) accumulator)
-              (= "nop" (get op :operation)) (recur (inc next-operation-idx) (set/union #{next-operation-idx} visited-positions) accumulator))))
-        {accumulator :nil})))
+    (puzzle-to-accumulator-at-stop current-puzzle)))
 
 (defn run-pt2
   []
@@ -89,5 +85,5 @@
         extra-puzzles (generate-new-puzzles current-puzzle 0 [])
         all-puzzles-str (concat extra-puzzles [current-puzzle])
         all-puzzles (map #(map parse-operation-str %) all-puzzles-str)]
-    (map accumulator-or-nil all-puzzles)))
-;    (accumulator-or-nil current-puzzle)))
+    (some #(if (get % :stop) %) (map puzzle-to-accumulator-at-stop all-puzzles))))
+
