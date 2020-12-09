@@ -1,12 +1,11 @@
 (ns clj-adventofcode2020.puzzle8
   (:gen-class)
-  (:require [clojure.string :as str]
-            [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
 
 (def fn-map
   {"+" +
    "-" -})
-
 
 (defn jmp
   [state signal-fn operand]

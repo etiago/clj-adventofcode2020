@@ -31,21 +31,21 @@
       (as-> p (apply merge p))))
 
 (def puzzle7-example
-  (->> (load-puzzle-file "resources/puzzle7-example.txt")))
+  (load-puzzle-file "resources/puzzle7-example.txt"))
 
 (def puzzle7-example2
-  (->> (load-puzzle-file "resources/puzzle7-example2.txt")))
+  (load-puzzle-file "resources/puzzle7-example2.txt"))
 
 (def puzzle7-deepexample
-  (->> (load-puzzle-file "resources/puzzle7-deepexample.txt")))
+  (load-puzzle-file "resources/puzzle7-deepexample.txt"))
 
 (def puzzle7-real
-  (->> (load-puzzle-file "resources/puzzle7-real.txt")))
+  (load-puzzle-file "resources/puzzle7-real.txt"))
 
 (defn contains-color-starting-on-color?
   [color-map color-start color-find to-check]
   (let [children (get color-map color-start)]
-    (when (not (every? empty? [to-check children]))
+    (when-not (every? empty? [to-check children])
       (if (contains? children color-find)
         true
         (recur
