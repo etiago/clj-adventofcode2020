@@ -9,7 +9,9 @@
             [clj-adventofcode2020.puzzle6 :as puzzle6]
             [clj-adventofcode2020.puzzle7 :as puzzle7]
             [clj-adventofcode2020.puzzle8 :as puzzle8]
-            [clj-adventofcode2020.puzzle9 :as puzzle9]))
+            [clj-adventofcode2020.puzzle9 :as puzzle9]
+            [clj-adventofcode2020.puzzle10 :as puzzle10]
+            [clj-adventofcode2020.puzzle11 :as puzzle11]))
 
 (defn -main
   [& args]
@@ -18,7 +20,7 @@
     (let [puzzle (nth args 0)
           part (nth args 1)
           runs (Integer/valueOf (nth args 2))
-          available-puzzles [0 1 2 3 4 5 6 7 8 9]]
+          available-puzzles [0 1 2 3 4 5 6 7 8 9 10 11]]
       (println
        (if (some #(= % (Integer/valueOf puzzle)) available-puzzles)
          (let [f (resolve
