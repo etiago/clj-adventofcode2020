@@ -8,8 +8,7 @@
   [filename]
   (->> (slurp filename)
        (clojure.string/split-lines)
-       (map #(str/split % #""))
-       ))
+       (map #(str/split % #""))))
 
 (def puzzle11-example
   (->>
@@ -112,10 +111,7 @@
         width (count (first current-puzzle-lines))
         empty-chair-positions (set (puzzle-lines-to-empty-chairs current-puzzle-lines))
         state {:seating (zipmap empty-chair-positions (repeat "L")) :width width :height height}]
-    (count-occuppied (get-stable-state state (get-next-state state)))
-
-
-    ))
+    (count-occuppied (get-stable-state state (get-next-state state)))))
 
 (defn add-b-to-a
   [pos-a pos-b]
@@ -142,10 +138,9 @@
   [state masks position]
   (let [outside-or-occupied
         (filter
-         #(do
-            (or (position-is-outside? state %)
-                (position-is-occuppied? state %)
-                (position-is-free-seat? state %)))
+         #(or (position-is-outside? state %)
+              (position-is-occuppied? state %)
+              (position-is-free-seat? state %))
          (map
           #(add-b-to-a position %)
           masks))
@@ -153,48 +148,79 @@
     (when (position-is-occuppied? state last-checked)
       last-checked)))
 
-(defonce all-mask-expansions (map #(reductions add-b-to-a (repeat %)) surrounding-mask))
+(def all-mask-expansions (vec (map #(reductions add-b-to-a (repeat 100 %)) surrounding-mask)))
 
 (defn count-occuppied-adjacent-new-rules
   [state position]
+  (count
+   (filter
+    some?
+    (map
+     (fn [mask-expansion]
+       (take-until-outside-or-occuppied-or-free state mask-expansion position))
+     all-mask-expansions))))
 
-    (count
-     (filter
-      some?
-      (map
-       (fn [mask-expansion]
-         (take-until-outside-or-occuppied-or-free state mask-expansion position))
-       all-mask-expansions))))
-
-(defn get-next-state-new-rules
-  [current-state]
-  (let [{width :width
-         height :height
-         seating :seating} current-state
-        positions (vec (keys seating))
-        positions-count (count positions)]
-    (loop [current-position 0
-           new-seating-free []
-           new-seating-occupied []]
-      (println current-position)
+(defn iterate-next
+  [current-state positions positions-count]
+  (fn [state]
+    (let [{current-position :current-position
+           new-seating-free :new-seating-free
+           new-seating-occupied :new-seating-occupied} state]
       (if (>= current-position positions-count)
-        (merge current-state {:seating (merge (zipmap new-seating-free (repeat "L")) (zipmap new-seating-occupied (repeat "#")))})
+        state
         (let [position (nth positions current-position)
               next-position (inc current-position)
               occupied-adjacent (count-occuppied-adjacent-new-rules current-state position)
-              current-seat (get seating position)]
+              current-seat (get (:seating current-state) position)]
           (if (= "L" current-seat)
             (if (= 0 occupied-adjacent)
-              (recur next-position new-seating-free (conj new-seating-occupied position))
-              (recur next-position (conj new-seating-free position) new-seating-occupied))
+              {:current-position next-position
+               :new-seating-free new-seating-free
+               :new-seating-occupied (conj new-seating-occupied position)}
+              {:current-position next-position
+               :new-seating-free (conj new-seating-free position)
+               :new-seating-occupied new-seating-occupied})
             (when (= "#" current-seat)
               (if (>= occupied-adjacent 5)
-                (recur next-position (conj new-seating-free position) new-seating-occupied)
-                (recur next-position new-seating-free (conj new-seating-occupied position))))))))))
+                {:current-position next-position
+                 :new-seating-free (conj new-seating-free position)
+                 :new-seating-occupied new-seating-occupied}
+                {:current-position next-position
+                 :new-seating-free new-seating-free
+                 :new-seating-occupied (conj new-seating-occupied position)}))))))))
+
+(defn stop-reducing-if-two-values-same
+  [last-val new-val]
+  (if (= last-val new-val)
+    (reduced new-val)
+    new-val))
+
+(defn get-next-state-new-rules
+  [current-state]
+  (let [{width :width height :height seating :seating} current-state
+        positions (vec (keys seating))
+        positions-count (count positions)
+        new-state (reduce stop-reducing-if-two-values-same
+                          (iterate
+                           (iterate-next current-state positions positions-count)
+                           {:current-position 0
+                            :new-seating-free []
+                            :new-seating-occupied []}))]
+    (merge
+     current-state
+     {:seating (merge (zipmap (:new-seating-free new-state) (repeat "L"))
+                      (zipmap (:new-seating-occupied new-state) (repeat "#")))})
+    ))
 
 (defn get-stable-state-new-rules-test
   [previous-state]
-  (lazy-seq (cons previous-state (get-stable-state-new-rules-test (get-next-state-new-rules previous-state)))))
+  (lazy-seq (cons previous-state
+                  (get-stable-state-new-rules-test
+                   (get-next-state-new-rules previous-state)))))
+
+(defn state-to-occupied-seats
+  [state]
+  (count (filter #(= % "#") (vals (:seating state)))))
 
 (defn run-pt2
   []
@@ -203,11 +229,7 @@
         width (count (first current-puzzle-lines))
         empty-chair-positions (puzzle-lines-to-empty-chairs current-puzzle-lines)
         state {:seating (zipmap empty-chair-positions (repeat "L")) :width width :height height}]
-
+    
     (reduce
-     (fn [last-val new-val]
-       (if (= last-val new-val)
-         (reduced new-val)
-         new-val))
-     (map (fn [state]
-            (count (filter #(= % "#") (vals (:seating state))))) (get-stable-state-new-rules-test state)))))
+     stop-reducing-if-two-values-same
+     (map state-to-occupied-seats (get-stable-state-new-rules-test state)))))
