@@ -121,13 +121,6 @@
   [pos-a pos-b]
   [(+ (first pos-a) (first pos-b)) (+ (second pos-a) (second pos-b))])
 
-
-(defn get-expanded-surrounding-positions
-  []
-  (map
-   #(take 5 (reductions add-b-to-a (repeat %)))
-   surrounding-mask))
-
 (defn position-is-outside?
   [state position]
   (let [{width :width
@@ -157,61 +150,64 @@
           #(add-b-to-a position %)
           masks))
         last-checked (first outside-or-occupied)]
-    (cond
-      (position-is-occuppied? state last-checked) {:seat last-checked :status :occupied}
-      (position-is-free-seat? state last-checked) {:seat last-checked :status :free}
-      :else {:seat last-checked :status :outside})))
+    (when (position-is-occuppied? state last-checked)
+      last-checked)))
+
+(defonce all-mask-expansions (map #(reductions add-b-to-a (repeat %)) surrounding-mask))
 
 (defn count-occuppied-adjacent-new-rules
   [state position]
-  (let [all-mask-expansions (map #(reductions add-b-to-a (repeat %)) surrounding-mask)]
-    (group-by
-     :status
-     (map
-      (fn [mask-expansion]
-        (take-until-outside-or-occuppied-or-free state mask-expansion position))
-      all-mask-expansions))))
+
+    (count
+     (filter
+      some?
+      (map
+       (fn [mask-expansion]
+         (take-until-outside-or-occuppied-or-free state mask-expansion position))
+       all-mask-expansions))))
 
 (defn get-next-state-new-rules
   [current-state]
   (let [{width :width
          height :height
          seating :seating} current-state
-        positions (keys seating)]
-    (loop [positions-to-check positions
-           new-seating seating]
-      (if (empty? positions-to-check)
-        (merge current-state {:seating new-seating})
-        (let [position (first positions-to-check)
-              occupied-or-free-adjacent (count-occuppied-adjacent-new-rules current-state position)
+        positions (vec (keys seating))
+        positions-count (count positions)]
+    (loop [current-position 0
+           new-seating-free []
+           new-seating-occupied []]
+      (println current-position)
+      (if (>= current-position positions-count)
+        (merge current-state {:seating (merge (zipmap new-seating-free (repeat "L")) (zipmap new-seating-occupied (repeat "#")))})
+        (let [position (nth positions current-position)
+              next-position (inc current-position)
+              occupied-adjacent (count-occuppied-adjacent-new-rules current-state position)
               current-seat (get seating position)]
           (if (= "L" current-seat)
-            (if (= 0 (count (:occupied occupied-or-free-adjacent)))
-              (recur (rest positions-to-check) (merge new-seating {position "#"}))
-              (recur (rest positions-to-check) (merge new-seating {position "L"})))
+            (if (= 0 occupied-adjacent)
+              (recur next-position new-seating-free (conj new-seating-occupied position))
+              (recur next-position (conj new-seating-free position) new-seating-occupied))
             (when (= "#" current-seat)
-              (if (>= (count (:occupied occupied-or-free-adjacent)) 5)
-                (recur (rest positions-to-check) (merge new-seating {position "L"}))
-                (recur (rest positions-to-check) (merge new-seating {position "#"}))))))))))
+              (if (>= occupied-adjacent 5)
+                (recur next-position (conj new-seating-free position) new-seating-occupied)
+                (recur next-position new-seating-free (conj new-seating-occupied position))))))))))
 
-(defn get-stable-state-new-rules
-  [previous-state new-state]
-  (if (= previous-state new-state)
-    previous-state
-    (recur new-state (get-next-state-new-rules new-state))))
+(defn get-stable-state-new-rules-test
+  [previous-state]
+  (lazy-seq (cons previous-state (get-stable-state-new-rules-test (get-next-state-new-rules previous-state)))))
 
 (defn run-pt2
   []
   (let [current-puzzle-lines puzzle11-real
         height (count current-puzzle-lines)
         width (count (first current-puzzle-lines))
-        empty-chair-positions (set (puzzle-lines-to-empty-chairs current-puzzle-lines))
-        state {:seating (zipmap empty-chair-positions (repeat "L")) :width width :height height}
-        final-state (get-stable-state-new-rules state (get-next-state-new-rules state))]
+        empty-chair-positions (puzzle-lines-to-empty-chairs current-puzzle-lines)
+        state {:seating (zipmap empty-chair-positions (repeat "L")) :width width :height height}]
 
-
-    ;;(pretty-print-board final-state)
-
-     (count (filter #(= % "#") (vals (:seating final-state))))
-  
-  ))
+    (reduce
+     (fn [last-val new-val]
+       (if (= last-val new-val)
+         (reduced new-val)
+         new-val))
+     (map (fn [state]
+            (count (filter #(= % "#") (vals (:seating state))))) (get-stable-state-new-rules-test state)))))
