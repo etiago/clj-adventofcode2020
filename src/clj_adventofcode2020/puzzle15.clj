@@ -31,32 +31,52 @@
 
 (defn should-speak-next
   [to-speak seen-at current-index]
-  (- current-index (first (get seen-at to-speak))))
+  (- current-index (get seen-at to-speak)))
 
 (defn get-new-seen-at
   [to-speak seen-at current-index]
-  (let [positions-current-to-speak (get seen-at to-speak)
-        new-positions [current-index (first positions-current-to-speak)]]
-    (merge seen-at {to-speak new-positions})))
+  (assoc seen-at to-speak current-index))
 
+(defn reduce-solver
+  [current-puzzle]
+  (reduce
+      (fn [state current-index]
+        (let [{seen-at :seen-at to-speak :to-speak} state
+              about-to-speak (if (was-never-spoken? to-speak seen-at)
+                               0
+                               (should-speak-next to-speak seen-at current-index))
+              new-seen-at (get-new-seen-at to-speak seen-at current-index)]
+          (assoc state
+                 :seen-at new-seen-at
+                 :to-speak about-to-speak)))
+      {:seen-at (zipmap (butlast current-puzzle)
+                        (drop 1 (range)))
+      :to-speak (last current-puzzle)}
+      (drop (count current-puzzle) (range 30000000))))
+
+(defn loop-solver
+  [current-puzzle]
+  (let [starting-seen-at (zipmap (butlast current-puzzle) (drop 1 (range)))
+        starting-to-speak (last current-puzzle)]
+    
+    (loop [seen-at starting-seen-at
+           to-speak starting-to-speak
+           current-index (count current-puzzle)]
+      (let [about-to-speak (if (was-never-spoken? to-speak seen-at)
+                             0
+                             (should-speak-next to-speak seen-at current-index))]
+        (if (= current-index 30000000)
+          about-to-speak
+          (recur (get-new-seen-at to-speak seen-at current-index)
+                 about-to-speak
+                 (inc current-index)))))))
+      
 (defn run-pt1
   []
   (let [current-puzzle (puzzle15-real)]
 
-    (reductions
-     (fn [state current-index]
-       (let [{seen-at :seen-at to-speak :to-speak} state
-             about-to-speak (if (was-never-spoken? to-speak seen-at)
-                              0
-                              (should-speak-next to-speak seen-at current-index))
-             new-seen-at (get-new-seen-at to-speak seen-at current-index)]
-
-         (merge state {:seen-at new-seen-at :to-speak about-to-speak})))
-         
-           
-     {:seen-at (zipmap (butlast current-puzzle) (map #(identity [% %]) (drop 1 (range))))
-      :to-speak (last current-puzzle)}
-     (drop (count current-puzzle) (range)))
-     
-    
-  ))
+    (:to-speak
+                                        ;(loop-solver current-puzzle)
+     (reduce-solver current-puzzle)
+     )
+    ))
